@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Cool 3D Graphics</title>
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href="Menu_style.css" />
+    </head>
+
+    <!-- Latest Major Changes: -->
+    <!-- v1.00 26.03.2021 Complete program after completion of all chapters for Udemy Online Course -->
+    <!-- v1.01 26.03.2021 Added "Quick & Dirty" calculation, toggelled via key "q" -->
+    <!-- v1.02 26.03.2021 Added Screenshot function, and removed -finally- the button "Clear Screen" -->
+    <!-- v1.03 27.03.2021 Moved light source further away for large monitors with high resolution -->
+    <!-- v1.04 27.03.2021 Removed event listener for mouse after loading a previously saved scene -->
+    <!-- v1.05 27.03.2021 Corrected CalculateAngleBetweenNormalAndLightSource to avoid wrong direction of normal vector in some cases -->
+    <!-- v1.06 27.03.2021 Added-local-Save-&-Load-functions -->
+    <!-- v1.07 28.03.2021 Introduction of predefined objects like cube, sphere, waves -->
+    <!-- v1.08 28.03.2021 Added menu functionality -->
+    <!-- v1.09 28.03.2021 Enabled keydown events and showaxes as EnterNewPoints function was disabled for menu -->
+    <!-- v1.10 07.05.2021 Improved speed by calculating reflection and refraction only if their influences are larger than a specific level -->
+    <!-- v1.11 07.05.2021 Improved speed by pre-calculating constants for areas -->
+    <!-- v1.12 08.05.2021 Added 4 views -->
+    <!-- v1.13 08.05.2021 Changed load and safe to take areas instead of points -->
+    <!-- v2.00 18.05.2021 Changed to 4 views, added many functions and changed shadow to have part of object color and part of color of object which gives shadow-->
+    <!-- v2.01 20.05.2021 Added load function for 3D-objects saved in STL-format -->
+    <!-- v2.02 20.05.2021 Added the use of up to 5 light sources -->
+    <!-- v2.03 11.06.2021 Added saving as STL file -->
+    <!-- v2.04 15.06.2021 Changing to multi-core calculations via WebWorkers -->
+    <!-- v2.10 30.04.2022 Changing file names to "correct ones" like "3D_SuperGraphics_v2.10" -->
+    <!-- v2.11 01.05.2022 Added possibility to run non-WebWorker calculation via RayTracingWithoutWebWorkers() triggered by boolean variable 'UseWebWorker' -->
+    <!-- v2.12 03.05.2022 Removed possibility to run non-WebWorker calculation via 'UseWebWorker'-->
+
+    <body>
+        <!--  MENU  -->
+        <!-- Source: https://wiki.selfhtml.org/wiki/JavaScript/Tutorials/zug%C3%A4ngliche_Dropdown-Navigation under license: CC-BY-SA 3.0 (de). -->
+
+        <script src="Menu.js"></script>
+
+        <a id="skip-link" href="#main">MenuMain</a>
+
+        <nav id="sitenav" aria-labelledby="sitenav-label">
+            <h2 id="sitenav-label" class="visually-hidden">Site-Navigation</h2>
+            <details>
+                <summary>Menu</summary>
+                <ul>
+                    <li>
+                        <details>
+                            <summary>Load & Save</summary>
+                            <ul>
+                                <!-- <li><a href="#" onclick="LoadObject(); return false;">Load small saved scene [l]</a></li> -->
+                                <!-- <li><a href="#"  onclick="SaveObject(); return false;">Save small scene (only possible for low number of areas) [k]</a></li> -->
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="document.querySelector('#file-input').click();  return false;"
+                                        >Load scene in STL format...</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="var DistortionDistanceBefore = DistortionDistance; DistortionDistance = 1e9; CloneAreaValues(AreaOriginal, Area); PrepareConstants(); DistortionDistance = DistortionDistanceBefore; SaveSTLFile(); return false;"
+                                        >Save scene in STL format...</a
+                                    >
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Edit</summary>
+                            <ul>
+                                <li id="CreateNewObjectMenu">
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; if (NumberOfCompleteObjects<MaxNbOfCompleteObjects) {getElementById('StopCreateNewObject').style.display = 'block';getElementById('CreateNewObjectMenu').style.display = 'none'; HideAllExceptFrontView(); CloneAreaValues(AreaOriginal, Area); NumberOfPoints=0; KeyPressed=0; UnSelectAll(); EnterNewPoints();} else {alert('Number of total objects reached');} return false;"
+                                        >Create new rotation object in FRONT
+                                        VIEW</a
+                                    >
+                                </li>
+                                <li
+                                    id="StopCreateNewObject"
+                                    style="display: none"
+                                >
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('CreateNewObjectMenu').style.display = 'block';getElementById('StopCreateNewObject').style.display = 'none';KeyPressed = 1; CheckIfAllPointsWereEntered(); UnhideAllExceptFrontView();return false;"
+                                        >Finish entering the new points [Right
+                                        Mouse Button]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="if (EnterObjectPoints == true) {CloneAreaValues(AreaOriginal, Area); DeleteObject(NumberOfCompleteObjects); NumberOfRotationSegments++;if (NumberOfRotationSegments > MaxNbOfRotSegments) {NumberOfRotationSegments = MaxNbOfRotSegments;} CreateRotationObject();} return false;"
+                                        >Increase Number of Segments [page
+                                        up]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="if (EnterObjectPoints == true) {CloneAreaValues(AreaOriginal, Area); DeleteObject(NumberOfCompleteObjects); NumberOfRotationSegments--;if (NumberOfRotationSegments < 2) {NumberOfRotationSegments = 2;} CreateRotationObject();} return false;"
+                                        >Decrease Number of Segments [page
+                                        down]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CloneAreaValues(AreaOriginal, Area); DeleteObject(); ShowAreaOf3DObject(); return false;"
+                                        >Delete selected object</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CloneAreaValues(AreaOriginal, Area); CopyObject(); ShowAreaOf3DObject(); return false;"
+                                        >Copy selected object / combine selected
+                                        objects into one new object</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="RotateSelected = 1; MoveSelected = 0; ChangeSizeInOneDirectionSelected = 0; return false;"
+                                        >Select Rotation</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="MoveSelected = 1; RotateSelected = 0; ChangeSizeInOneDirectionSelected = 0; return false;"
+                                        >Select Move</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; ChangeSizeInOneDirectionSelected = 1; RotateSelected = 0; MoveSelected = 0; return false;"
+                                        >Change size of object in one
+                                        direction</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; MakeFourAreasFromOne(); ShowAreaOf3DObject(); return false;"
+                                        >Split each area into 4</a
+                                    >
+                                </li>
+                                <!-- <li><a href="#" onclick="EnterObjectPoints = false; MakeSmooth(); ShowAreaOf3DObject(); return false;">Make smooth</a></li> -->
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; MakeLessSmooth(); ShowAreaOf3DObject(); return false;"
+                                        >Make object rough randomly</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; for (var i = 0; i<AreaIndex; i++) {if (SelectedArea[i] == true) AreaConstants.items[i].RoundedEdges = 1-AreaConstants.items[i].RoundedEdges;}; ShowAreaOf3DObject(); return false;"
+                                        >Make / Unmake reflections smoother
+                                        [space]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; ApplyCheckerBoard(); ShowAreaOf3DObject(); return false;"
+                                        >Apply Checker Board coloring on
+                                        object</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; ApplyPlainColor(); ShowAreaOf3DObject(); return false;"
+                                        >Apply standard coloring on object</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; ShowAllObjects(); ShowAreaOf3DObject(); return false;"
+                                        >Show all objects</a
+                                    >
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Light</summary>
+                            <ul>
+                                <li id="ShowLight">
+                                    <a
+                                        href="#"
+                                        onclick="ShowAllLamps(); ShowAreaOf3DObject(); return false;"
+                                        >Show all active lamps</a
+                                    >
+                                </li>
+                                <li id="Light0On">
+                                    <a
+                                        href="#"
+                                        onclick="ActivateLight(0); ShowAreaOf3DObject(); return false;"
+                                        >Activate Light #0</a
+                                    >
+                                </li>
+                                <li id="Light0Off">
+                                    <a
+                                        href="#"
+                                        onclick="DeActivateLight(0); ShowAreaOf3DObject(); return false;"
+                                        >De-activate Light #0</a
+                                    >
+                                </li>
+                                <li id="Light0Center">
+                                    <a
+                                        href="#"
+                                        onclick="CenterLight(0); ShowAreaOf3DObject(); return false;"
+                                        >> Center Light #0</a
+                                    >
+                                </li>
+                                <li id="Light0Select">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light0Select').style.display = 'none'; getElementById('Light0UnSelect').style.display = 'block'; MoveLight.items[0] = true; SetColorOfLight.items[0] = true; return false;"
+                                        >> Select Light#0</a
+                                    >
+                                </li>
+                                <li id="Light0UnSelect" style="display: none">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light0UnSelect').style.display = 'none'; getElementById('Light0Select').style.display = 'block'; MoveLight.items[0] = false; SetColorOfLight.items[0] = false; return false;"
+                                        >> Unselect Light #0</a
+                                    >
+                                </li>
+                                <li id="Light1On">
+                                    <a
+                                        href="#"
+                                        onclick="ActivateLight(1); ShowAreaOf3DObject(); return false;"
+                                        >Activate Light #1</a
+                                    >
+                                </li>
+                                <li id="Light1Off">
+                                    <a
+                                        href="#"
+                                        onclick="DeActivateLight(1); ShowAreaOf3DObject(); return false;"
+                                        >De-activate Light #1</a
+                                    >
+                                </li>
+                                <li id="Light1Center">
+                                    <a
+                                        href="#"
+                                        onclick="CenterLight(1); ShowAreaOf3DObject(); return false;"
+                                        >> Center Light #1</a
+                                    >
+                                </li>
+                                <li id="Light1Select">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light1Select').style.display = 'none'; getElementById('Light1UnSelect').style.display = 'block'; MoveLight.items[1] = true; SetColorOfLight.items[1] = true; return false;"
+                                        >> Select Light#1</a
+                                    >
+                                </li>
+                                <li id="Light1UnSelect" style="display: none">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light1UnSelect').style.display = 'none'; getElementById('Light1Select').style.display = 'block'; MoveLight.items[1] = false; SetColorOfLight.items[1] = false; return false;"
+                                        >> Unselect Light #1</a
+                                    >
+                                </li>
+                                <li id="Light2On">
+                                    <a
+                                        href="#"
+                                        onclick="ActivateLight(2); ShowAreaOf3DObject(); return false;"
+                                        >Activate Light #2</a
+                                    >
+                                </li>
+                                <li id="Light2Off">
+                                    <a
+                                        href="#"
+                                        onclick="DeActivateLight(2); ShowAreaOf3DObject(); return false;"
+                                        >De-activate Light #2</a
+                                    >
+                                </li>
+                                <li id="Light2Center">
+                                    <a
+                                        href="#"
+                                        onclick="CenterLight(2); ShowAreaOf3DObject(); return false;"
+                                        >> Center Light #2</a
+                                    >
+                                </li>
+                                <li id="Light2Select">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light2Select').style.display = 'none'; getElementById('Light2UnSelect').style.display = 'block'; MoveLight.items[2] = true; SetColorOfLight.items[2] = true; return false;"
+                                        >> Select Light#2</a
+                                    >
+                                </li>
+                                <li id="Light2UnSelect" style="display: none">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light2UnSelect').style.display = 'none'; getElementById('Light2Select').style.display = 'block'; MoveLight.items[2] = false; SetColorOfLight.items[2] = false; return false;"
+                                        >> Unselect Light #2</a
+                                    >
+                                </li>
+                                <li id="Light3On">
+                                    <a
+                                        href="#"
+                                        onclick="ActivateLight(3); ShowAreaOf3DObject(); return false;"
+                                        >Activate Light #3</a
+                                    >
+                                </li>
+                                <li id="Light3Off">
+                                    <a
+                                        href="#"
+                                        onclick="DeActivateLight(3); ShowAreaOf3DObject(); return false;"
+                                        >De-activate Light #3</a
+                                    >
+                                </li>
+                                <li id="Light3Center">
+                                    <a
+                                        href="#"
+                                        onclick="CenterLight(3); ShowAreaOf3DObject(); return false;"
+                                        >> Center Light #3</a
+                                    >
+                                </li>
+                                <li id="Light3Select">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light3Select').style.display = 'none'; getElementById('Light3UnSelect').style.display = 'block'; MoveLight.items[3] = true; SetColorOfLight.items[3] = true; return false;"
+                                        >> Select Light#3</a
+                                    >
+                                </li>
+                                <li id="Light3UnSelect" style="display: none">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light3UnSelect').style.display = 'none'; getElementById('Light3Select').style.display = 'block'; MoveLight.items[3] = false; SetColorOfLight.items[3] = false; return false;"
+                                        >> Unselect Light #3</a
+                                    >
+                                </li>
+                                <li id="Light4On">
+                                    <a
+                                        href="#"
+                                        onclick="ActivateLight(4); ShowAreaOf3DObject(); return false;"
+                                        >Activate Light #4</a
+                                    >
+                                </li>
+                                <li id="Light4Off">
+                                    <a
+                                        href="#"
+                                        onclick="DeActivateLight(4); ShowAreaOf3DObject(); return false;"
+                                        >De-activate Light #4</a
+                                    >
+                                </li>
+                                <li id="Light4Center">
+                                    <a
+                                        href="#"
+                                        onclick="CenterLight(4); ShowAreaOf3DObject(); return false;"
+                                        >> Center Light #4</a
+                                    >
+                                </li>
+                                <li id="Light4Select">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light4Select').style.display = 'none'; getElementById('Light4UnSelect').style.display = 'block'; MoveLight.items[4] = true; SetColorOfLight.items[4] = true; return false;"
+                                        >> Select Light#4</a
+                                    >
+                                </li>
+                                <li id="Light4UnSelect" style="display: none">
+                                    <a
+                                        href="#"
+                                        onclick="getElementById('Light4UnSelect').style.display = 'none'; getElementById('Light4Select').style.display = 'block'; MoveLight.items[4] = false; SetColorOfLight.items[4] = false; return false;"
+                                        >> Unselect Light #4</a
+                                    >
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <a href="#" onclick="SaveAsImage(); return false;"
+                            >Take Screenshot [s]</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="#"
+                            onclick="if (Resolution < StandardResolution*100) {Resolution = Resolution*2;} else {Resolution = StandardResolution;} setTimeout(function() {document.title = 'Resolution set to: '+Resolution;},0); return false;"
+                            >Change Resolution [q]</a
+                        >
+                    </li>
+                    <li>
+                        <details>
+                            <summary>Predefined Objects</summary>
+                            <ul>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CreateCube(); return false;"
+                                        >Create Cube [c]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CreateSphere();return false;"
+                                        >Create Sphere [m]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CreateWaves(); return false;"
+                                        >Create Waves [n]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CreateWall(); return false;"
+                                        >Create Background [p]</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CreateRoof(); return false;"
+                                        >Create Roof</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="#"
+                                        onclick="EnterObjectPoints = false; CheckerBoard(); return false;"
+                                        >Create Checker Board</a
+                                    >
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <a
+                            href="#"
+                            onclick="EnterObjectPoints = false; RayTracingStart(); return false;"
+                            >Start / Stop RayTracing [r]</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="#"
+                            onclick="EnterObjectPoints = false; RayTracingStart2K(); return false;"
+                            >Start and Save RayTracing 2K-Image</a
+                        >
+                    </li>
+                    <br />
+                    <li>
+                        <input
+                            type="range"
+                            id="ColorRed"
+                            disabled
+                            min="0"
+                            max="255"
+                            step="1"
+                            value="0"
+                            style="width: 60px; display: none"
+                        />
+                    </li>
+                    <li>
+                        <input
+                            type="range"
+                            id="ColorGreen"
+                            disabled
+                            min="0"
+                            max="255"
+                            step="1"
+                            value="0"
+                            style="width: 60px; display: none"
+                        />
+                    </li>
+                    <li>
+                        <input
+                            type="range"
+                            id="ColorBlue"
+                            disabled
+                            min="0"
+                            max="255"
+                            step="1"
+                            value="0"
+                            style="width: 60px; display: none"
+                        />
+                    </li>
+                    <li><input type="color" id="Colors" /></li>
+                    <li>
+                        Refract. Idx<input
+                            type="range"
+                            id="RefractiveIndexOfMaterial"
+                            min="1"
+                            max="5"
+                            step="0.1"
+                            value="1"
+                            alt="Refractive Index Of Material. Air: 1.0, Water: 1.33, Glass: 1.5"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="RefractiveIndexOfMaterialnumber"
+                            min="1"
+                            max="5"
+                            step="0.1"
+                            value="1"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        Surface Struct<input
+                            type="range"
+                            id="SurfaceStructur"
+                            min="1"
+                            max="250"
+                            step="1"
+                            value="1"
+                            alt="Surface Structur. 0 (raw) - 250 (smooth). Standard values: 2-20"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="SurfaceStructurnumber"
+                            min="1"
+                            max="250"
+                            step="1"
+                            value="1"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        Direct light<input
+                            type="range"
+                            id="PartOfDirectLight"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            alt="Part of Direct Light: 0 (no part) - 1 (only this part)"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="PartOfDirectLightnumber"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        Reflect light<input
+                            type="range"
+                            id="PartOfReflectlight"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            alt="Part of Reflected Light: 0 (no part) - 1 (only this part)"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="PartOfReflectlightnumber"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        Refract light<input
+                            type="range"
+                            id="PartOfRefractionlight"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            alt="Part of Refraction Light: 0 (no part) - 1 (only this part)"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="PartOfRefractionlightnumber"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.3"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        Surroud light<input
+                            type="range"
+                            id="PartSurrounding"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.1"
+                            alt="Part of Surrounding Light: 0 (no surrounding light) - 1 (very bright)"
+                            style="width: 60px"
+                        /><input
+                            type="number"
+                            id="PartSurroundingnumber"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.1"
+                            style="width: 40px; border: 0"
+                        />
+                    </li>
+                    <li>
+                        <input
+                            type="file"
+                            id="file-input"
+                            accept=".stl"
+                            style="display: none"
+                        /><button id="read-button" style="display: none">
+                            Load File
+                        </button>
+                    </li>
+                </ul>
+            </details>
+        </nav>
+
+        <!--  MENU  -->
+
+        <style>
+            .CanvasContainers {
+                position: absolute;
+                height: 90%;
+            }
+            #ColorRed {
+                -webkit-appearance: none; /* Override default CSS styles */
+                background: #ff0000;
+            }
+            #ColorGreen {
+                -webkit-appearance: none; /* Override default CSS styles */
+                background: #00ff00;
+            }
+            #ColorBlue {
+                -webkit-appearance: none; /* Override default CSS styles */
+                background: #1e91ff;
+            }
+        </style>
+        <canvas
+            id="Canvas2K"
+            style="
+                top: 70px;
+                left: 20px;
+                width: 1920px;
+                height: 1080px;
+                position: absolute;
+                border-width: 10px;
+            "
+        >
+            Unfortunately, your browser does not support the canvas element.
+            Please use another, more modern web browser
+        </canvas>
+        <canvas
+            id="Canvas"
+            style="
+                top: 70px;
+                left: 20px;
+                width: 45%;
+                height: 40%;
+                position: absolute;
+                border-width: 2px;
+                border-style: solid;
+                border-color: #000000;
+            "
+            tabindex="1"
+        >
+            Unfortunately, your browser does not support the canvas element.
+            Please use another, more modern web browser
+        </canvas>
+        <canvas
+            id="CanvasTop"
+            style="
+                top: 70px;
+                left: 50%;
+                width: 45%;
+                height: 40%;
+                position: absolute;
+                border-width: 2px;
+                border-style: solid;
+                border-color: #000000;
+            "
+            tabindex="1"
+        >
+            Unfortunately, your browser does not support the canvas element.
+            Please use another, more modern web browser
+        </canvas>
+        <canvas
+            id="CanvasSide"
+            style="
+                top: 52%;
+                left: 20px;
+                width: 45%;
+                height: 40%;
+                position: absolute;
+                border-width: 2px;
+                border-style: solid;
+                border-color: #000000;
+            "
+            tabindex="1"
+        >
+            Unfortunately, your browser does not support the canvas element.
+            Please use another, more modern web browser
+        </canvas>
+        <canvas
+            id="CanvasFront"
+            style="
+                top: 52%;
+                left: 50%;
+                width: 45%;
+                height: 40%;
+                position: absolute;
+                border-width: 2px;
+                border-style: solid;
+                border-color: #000000;
+            "
+            tabindex="1"
+        >
+            Unfortunately, your browser does not support the canvas element.
+            Please use another, more modern web browser
+        </canvas>
+        <div
+            class="CanvasContainers"
+            style="
+                top: 90%;
+                left: 20px;
+                width: 90%;
+                height: 6%;
+                position: absolute;
+            "
+        >
+            <br />
+            <canvas
+                id="CanvasObjectAll"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject0"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject1"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject2"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject3"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject4"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject5"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject6"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject7"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <canvas
+                id="CanvasObject8"
+                style="
+                    width: 8.5%;
+                    height: 100%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+                tabindex="1"
+            >
+                Unfortunately, your browser does not support the canvas element.
+                Please use another, more modern web browser
+            </canvas>
+            <input
+                type="button"
+                id="FormerObjects"
+                value="<"
+                style="
+                    top: -26px;
+                    width: 20px;
+                    height: 50%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+            />
+            <input
+                type="button"
+                id="NextObjects"
+                value=">"
+                style="
+                    left: -24px;
+                    top: -7px;
+                    width: 20px;
+                    height: 50%;
+                    position: relative;
+                    border-width: 1px;
+                    border-style: solid;
+                    border-color: #000000;
+                "
+            />
+        </div>
+        <input
+            type="range"
+            id="zoom"
+            min="0.1"
+            max="2"
+            step="0.1"
+            value="1"
+            style="left: 40px; top: 48%; position: absolute"
+        />
+        <input
+            type="number"
+            id="zoomnumber"
+            min="0.1"
+            max="2"
+            step="0.1"
+            value="1"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 190px;
+                top: 48%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="perspective"
+            min="-4000"
+            max="-1"
+            step="-10"
+            value="-400"
+            style="
+                left: -2%;
+                top: 35%;
+                position: absolute;
+                transform: rotate(270deg);
+            "
+        />
+        <input
+            type="number"
+            id="perspectivenumber"
+            min="-4000"
+            max="-1"
+            step="-10"
+            value="-400"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 2%;
+                top: 23%;
+                width: 50px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangex1"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="left: 52%; top: 48%; position: absolute"
+        />
+        <input
+            type="number"
+            id="rangex1number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 63%;
+                top: 48%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangez1"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                left: 47%;
+                top: 35%;
+                position: absolute;
+                transform: rotate(270deg);
+            "
+        />
+        <input
+            type="number"
+            id="rangez1number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 51.5%;
+                top: 23%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangez2"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="left: 40px; top: 89%; position: absolute"
+        />
+        <input
+            type="number"
+            id="rangez2number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 190px;
+                top: 89%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangey2"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                left: -2%;
+                top: 76%;
+                position: absolute;
+                transform: rotate(270deg);
+            "
+        />
+        <input
+            type="number"
+            id="rangey2number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 2.5%;
+                top: 64%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangex3"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="left: 52%; top: 89%; position: absolute"
+        />
+        <input
+            type="number"
+            id="rangex3number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 63%;
+                top: 89%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <input
+            type="range"
+            id="rangey3"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                left: 47%;
+                top: 76%;
+                position: absolute;
+                transform: rotate(270deg);
+            "
+        />
+        <input
+            type="number"
+            id="rangey3number"
+            min="-30"
+            max="30"
+            step="1"
+            value="0"
+            style="
+                background: rgba(0, 0, 0, 0);
+                border: none;
+                outline: none;
+                left: 51.5%;
+                top: 64%;
+                width: 40px;
+                border: 0;
+                position: absolute;
+            "
+        />
+        <script src="3D_SuperGraphics_Functions.js"></script>
+        <script>
+            document
+                .querySelector("#file-input")
+                .addEventListener("change", function () {
+                    document.querySelector("#read-button").click();
+                });
+
+            document
+                .querySelector("#read-button")
+                .addEventListener("click", function () {
+                    let file = document.querySelector("#file-input").files[0];
+                    let reader = new FileReader();
+                    reader.addEventListener("load", function (e) {
+                        let TextFromFile = e.target.result;
+                        //console.log("Text:"+TextFromFile);
+                        LoadSTLFile(TextFromFile);
+                        //document.querySelector("#file-contents").textContent = text;
+                    });
+                    reader.readAsText(file);
+                    //console.log(reader);
+                });
+        </script>
+        <script>
+            var Canvas2K = document.getElementById("Canvas2K");
+            var rect2K = Canvas2K.getBoundingClientRect();
+            var Canvas = document.getElementById("Canvas");
+            var rect = Canvas.getBoundingClientRect();
+            var CanvasTop = document.getElementById("CanvasTop");
+            var rectTop = CanvasTop.getBoundingClientRect();
+            var CanvasSide = document.getElementById("CanvasSide");
+            var rectSide = CanvasSide.getBoundingClientRect();
+            var CanvasFront = document.getElementById("CanvasFront");
+            var rectFront = CanvasFront.getBoundingClientRect();
+            var CanvasObjectAll = document.getElementById("CanvasObjectAll");
+            var rectObjectAll = CanvasObjectAll.getBoundingClientRect();
+            var CanvasObject0 = document.getElementById("CanvasObject0");
+            var rectObject0 = CanvasObject0.getBoundingClientRect();
+            var CanvasObject1 = document.getElementById("CanvasObject1");
+            var rectObject1 = CanvasObject1.getBoundingClientRect();
+            var CanvasObject2 = document.getElementById("CanvasObject2");
+            var rectObject2 = CanvasObject2.getBoundingClientRect();
+            var CanvasObject3 = document.getElementById("CanvasObject3");
+            var rectObject3 = CanvasObject3.getBoundingClientRect();
+            var CanvasObject4 = document.getElementById("CanvasObject4");
+            var rectObject4 = CanvasObject4.getBoundingClientRect();
+            var CanvasObject5 = document.getElementById("CanvasObject5");
+            var rectObject5 = CanvasObject5.getBoundingClientRect();
+            var CanvasObject6 = document.getElementById("CanvasObject6");
+            var rectObject6 = CanvasObject6.getBoundingClientRect();
+            var CanvasObject7 = document.getElementById("CanvasObject7");
+            var rectObject7 = CanvasObject7.getBoundingClientRect();
+            var CanvasObject8 = document.getElementById("CanvasObject8");
+            var rectObject8 = CanvasObject8.getBoundingClientRect();
+
+            var RotateSelected = true;
+            var MoveSelected = false;
+            var ChangeSizeInOneDirectionSelected = false;
+            var SelectedEightObjects = 0;
+
+            PrepareCanvas();
+            Image2K = false;
+
+            var RayTracingStarted = false;
+            var KeyPressed = 0;
+            var mousePos;
+            var NumberOfPoints = 0;
+            var oldx = 0;
+            var oldy = 0;
+            var oldkoorx = 0;
+            var oldkoory = 0;
+
+            var MaxNumberOfPoints = 200;
+            var MaxNbOfRotSegments = 360;
+
+            var MoveX = 0;
+            var MoveY = 0;
+            var MoveZ = 0;
+
+            var PointCoordinatesArray = new Array2D(MaxNumberOfPoints, 3);
+            var OriginPointCoords = new Array3D(
+                MaxNbOfRotSegments,
+                MaxNumberOfPoints,
+                3
+            );
+            var Points = new Array3D(MaxNbOfRotSegments, MaxNumberOfPoints, 3);
+
+            var maxarea = MaxNumberOfPoints * MaxNbOfRotSegments;
+            var Area = new Array3D(maxarea, 4, 3);
+            var AreaOriginal = new Array3D(maxarea, 4, 3);
+            var MaxNbOfCompleteObjects = 100;
+            var AreaBelongsToObject = new Array1D(MaxNbOfCompleteObjects);
+            var NumberOfCompleteObjects = 0;
+            var SelectedArea = new Array1D(maxarea);
+            var AreaConstants = new Array1D(maxarea);
+            var AreaIndex = 0;
+
+            var AreaZValues = new Array1D(maxarea);
+            var AreaOrderIndex = new Array1D(maxarea);
+
+            var width = Canvas.width;
+            var height = Canvas.height;
+
+            var GradFromRad = (1 / (2 * Math.PI)) * 360;
+
+            var TotalEnteredPoints = 0;
+            var NumberOfRotationSegments = 60;
+
+            var Perspective = 0;
+            var DistortionDistance = (rangeperspective =
+                -document.querySelector("#perspective").value);
+
+            var DrawingMethod = 0;
+
+            var AngleX = 0; // Rotation angle around X-axis
+            var AngleY = 0;
+            var AngleZ = 0;
+
+            var NumberOfRotationsX = 0;
+            var NumberOfRotationsY = 0;
+            var NumberOfRotationsZ = 0;
+            var increment = 5;
+
+            var StandardResolution = 1;
+            var Resolution = StandardResolution;
+
+            var PartOfDirectLight = 0.8;
+            var PartOfReflectlight = 0.1;
+            var PartOfRefractionlight = 0.0;
+            var PartSurrounding = 0.1;
+
+            var LevelOfInfluence = 0.05; // Below this level, call for new light ray shall not be executed anymore
+
+            var ColorOfObject = {
+                Red: 0 / 255,
+                Green: 50 / 255,
+                Blue: 255 / 255,
+            };
+
+            var MoveLight = new Array1D(10);
+            var SetColorOfLight = new Array1D(10);
+            var LightOn = new Array1D(10);
+            var ColorOfLightSource = new Array1D(10);
+            var LightSourceX = new Array1D(10);
+            var LightSourceY = new Array1D(10);
+            var LightSourceZ = new Array1D(10);
+            SetUpLights();
+
+            var docTitle = 0;
+            var StartTime = 0;
+
+            var RefractiveIndexOfMaterial = 1.5; //Quartz = 1.46 / Window Glass = 1.54 / Air = 1.00 / Water = 1.33 / Diamond = 2.42
+            var SurfaceStructur = 20;
+
+            var ZoomFaktor = 1;
+            var MaxRecursionDepth = 10;
+
+            //EnterNewPoints();
+            window.addEventListener("keydown", keydownevent);
+            var ShiftPressed = false;
+            var EnterObjectPoints = false;
+            ShowAxesAndEnteredPoints();
+
+            //RayTracing();
+
+            var CalculatedLines = 0;
+
+            function RayTracing() {
+                //DrawingContext.clearRect(0,0,Canvas.width,Canvas.height);
+                WebWorkerRunning = true;
+                CalculatedLines = 0;
+                RunningWebWorker = 0;
+                var NumberOfCPUCores = navigator.hardwareConcurrency - 1 || 1;
+                var data = {
+                    RotateSelected: RotateSelected,
+                    MoveSelected: MoveSelected,
+                    ChangeSizeInOneDirectionSelected:
+                        ChangeSizeInOneDirectionSelected,
+                    SelectedEightObjects: SelectedEightObjects,
+                    Image2K: Image2K,
+                    RayTracingStarted: RayTracingStarted,
+                    KeyPressed: KeyPressed,
+                    mousePos: mousePos,
+                    NumberOfPoints: NumberOfPoints,
+                    oldx: oldx,
+                    oldy: oldy,
+                    oldkoorx: oldkoorx,
+                    oldkoory: oldkoory,
+                    MaxNumberOfPoints: MaxNumberOfPoints,
+                    MaxNbOfRotSegments: MaxNbOfRotSegments,
+                    MoveX: MoveX,
+                    MoveY: MoveY,
+                    MoveZ: MoveZ,
+                    PointCoordinatesArray: PointCoordinatesArray,
+                    OriginPointCoords: OriginPointCoords,
+                    Points: Points,
+                    maxarea: maxarea,
+                    Area: Area,
+                    AreaOriginal: AreaOriginal,
+                    MaxNbOfCompleteObjects: MaxNbOfCompleteObjects,
+                    AreaBelongsToObject: AreaBelongsToObject,
+                    NumberOfCompleteObjects: NumberOfCompleteObjects,
+                    SelectedArea: SelectedArea,
+                    AreaConstants: AreaConstants,
+                    AreaIndex: AreaIndex,
+                    AreaZValues: AreaZValues,
+                    AreaOrderIndex: AreaOrderIndex,
+                    width: width,
+                    height: height,
+                    GradFromRad: GradFromRad,
+                    TotalEnteredPoints: TotalEnteredPoints,
+                    NumberOfRotationSegments: NumberOfRotationSegments,
+                    Perspective: Perspective,
+                    DistortionDistance: DistortionDistance,
+                    DrawingMethod: DrawingMethod,
+                    AngleX: AngleX,
+                    AngleY: AngleY,
+                    AngleZ: AngleZ,
+                    NumberOfRotationsX: NumberOfRotationsX,
+                    NumberOfRotationsY: NumberOfRotationsY,
+                    NumberOfRotationsZ: NumberOfRotationsZ,
+                    increment: increment,
+                    StandardResolution: StandardResolution,
+                    Resolution: Resolution,
+                    PartOfDirectLight: PartOfDirectLight,
+                    PartOfReflectlight: PartOfReflectlight,
+                    PartOfRefractionlight: PartOfRefractionlight,
+                    PartSurrounding: PartSurrounding,
+                    LevelOfInfluence: LevelOfInfluence,
+                    ColorOfObject: ColorOfObject,
+                    MoveLight: MoveLight,
+                    SetColorOfLight: SetColorOfLight,
+                    LightOn: LightOn,
+                    ColorOfLightSource: ColorOfLightSource,
+                    LightSourceX: LightSourceX,
+                    LightSourceY: LightSourceY,
+                    LightSourceZ: LightSourceZ,
+                    docTitle: docTitle,
+                    StartTime: StartTime,
+                    RefractiveIndexOfMaterial: RefractiveIndexOfMaterial,
+                    SurfaceStructur: SurfaceStructur,
+                    ZoomFaktor: ZoomFaktor,
+                    MaxRecursionDepth: MaxRecursionDepth,
+                    NumberOfCPUCores: NumberOfCPUCores,
+                };
+
+                for (var iWorker = 0; iWorker < NumberOfCPUCores; iWorker++) {
+                    RunningWebWorker++;
+                    CallWebWorkers(iWorker, data);
+                }
+            }
+
+            function RayTracingWithoutWebWorkers() {
+                for (
+                    x = -width / 2;
+                    x < width / 2;
+                    x = x + Resolution / ZoomFaktor
+                ) {
+                    for (
+                        y = -height / 2;
+                        y < height / 2;
+                        y = y + Resolution / ZoomFaktor
+                    ) {
+                        CalculatePixel(x, y);
+                    }
+                }
+                RayTracingCompleted = true;
+            }
+
+            function CallWebWorkers(counter, data) {
+                var webworker = new Worker("3D_SuperGraphics_WebWorker.js");
+                webworker.postMessage({ counter, data });
+                webworker.onmessage = function (Color) {
+                    var countLines = 0;
+                    var ColorOfPoint;
+                    var y = Color.data.y;
+                    if (y == 1e6 || RayTracingCompleted) {
+                        RunningWebWorker--;
+                        webworker.terminate();
+                    } else {
+                        //console.log("erhalten",counter,y);
+                        for (
+                            var x = -width / 2;
+                            x < width / 2;
+                            x = x + Resolution / ZoomFaktor
+                        ) {
+                            ColorOfPoint = Color.data.results[countLines];
+                            //if (ColorOfPoint.Red != 1) console.log("rgb("+ColorOfPoint.Red*255+", "+ColorOfPoint.Green*255+", "+ColorOfPoint.Blue*255+")");
+                            countLines++;
+                            //x = Color.data.x;
+                            //webworker[counter].terminate();
+                            //drawBox(parseInt(width/2-x-2,10),parseInt(height/2-y-2,10),parseInt(width/2-x+2+Resolution/ZoomFaktor,10),parseInt(height/2-y+2+Resolution/ZoomFaktor,10),1,DrawingContext,"rgb("+255+", "+255+", "+255+")",true);
+                            drawBox(
+                                parseInt(width / 2 - x, 10),
+                                parseInt(height / 2 - y, 10),
+                                parseInt(
+                                    width / 2 - x + Resolution / ZoomFaktor,
+                                    10
+                                ),
+                                parseInt(
+                                    height / 2 - y + Resolution / ZoomFaktor,
+                                    10
+                                ),
+                                1,
+                                DrawingContext,
+                                "rgb(" +
+                                    ColorOfPoint.Red * 255 +
+                                    ", " +
+                                    ColorOfPoint.Green * 255 +
+                                    ", " +
+                                    ColorOfPoint.Blue * 255 +
+                                    ")",
+                                true
+                            );
+                            if (Image2K) {
+                                //drawBox(parseInt((width/2-x),10),parseInt((height/2-y),10),parseInt((width/2-x+Resolution),10),parseInt((height/2-y+Resolution),10),1,DrawingContext,"rgb("+ColorOfPoint.Red*255+", "+ColorOfPoint.Green*255+", "+ColorOfPoint.Blue*255+")",true);
+                                drawBox(
+                                    parseInt(ZoomFaktor * (width / 2 - x), 10),
+                                    parseInt(ZoomFaktor * (height / 2 - y), 10),
+                                    parseInt(
+                                        ZoomFaktor *
+                                            (width / 2 -
+                                                x +
+                                                Resolution / ZoomFaktor),
+                                        10
+                                    ),
+                                    parseInt(
+                                        ZoomFaktor *
+                                            (height / 2 -
+                                                y +
+                                                Resolution / ZoomFaktor),
+                                        10
+                                    ),
+                                    1,
+                                    DrawingContext2K,
+                                    "rgb(" +
+                                        ColorOfPoint.Red * 255 +
+                                        ", " +
+                                        ColorOfPoint.Green * 255 +
+                                        ", " +
+                                        ColorOfPoint.Blue * 255 +
+                                        ")",
+                                    true
+                                );
+                            }
+                            //else
+                            //{
+                            //	drawBox(parseInt(width/2-x,10),parseInt(height/2-y,10),parseInt(width/2-x+Resolution,10),parseInt(height/2-y+Resolution,10),1,DrawingContext,"rgb("+ColorOfPoint.Red*255+", "+ColorOfPoint.Green*255+", "+ColorOfPoint.Blue*255+")",true);
+                            //}
+                        }
+                        CalculatedLines =
+                            CalculatedLines + Resolution / ZoomFaktor;
+                        // console.log(height,CalculatedLines);
+                        if (
+                            docTitle <
+                            parseInt((1000 / height) * CalculatedLines, 10) / 10
+                        ) {
+                            docTitle =
+                                parseInt(
+                                    (1000 / height) * CalculatedLines,
+                                    10
+                                ) / 10;
+                            var tempTime = new Date();
+                            var tempDone =
+                                (tempTime.getTime() - StartTime) / 1000;
+                            document.title =
+                                docTitle +
+                                "% (" +
+                                SecToHourMinSec(
+                                    parseInt(
+                                        ((100 - docTitle * 1) / docTitle) *
+                                            tempDone,
+                                        10
+                                    )
+                                ) +
+                                " to go)";
+                        }
+                        //if (RayTracingStarted == false) webworker.terminate();
+                    }
+                    //console.log(RunningWebWorker,y);
+                    if (RunningWebWorker == 0) {
+                        RayTracingCompleted = true;
+                    }
+                };
+            }
+
+            function CalculatePixel(x, y) {
+                setTimeout(function () {
+                    drawBox(
+                        width / 2 - x,
+                        height / 2 - y,
+                        width / 2 - x - 1,
+                        height / 2 - y - 1,
+                        1,
+                        DrawingContext,
+                        "rgb(255,0,0)",
+                        true
+                    );
+                }, 0);
+                setTimeout(function () {
+                    if (
+                        docTitle <
+                        parseInt(
+                            (1000 / width) * (x - Resolution + width / 2),
+                            10
+                        ) /
+                            10
+                    ) {
+                        docTitle =
+                            parseInt(
+                                (1000 / width) * (x - Resolution + width / 2),
+                                10
+                            ) / 10;
+                        var tempTime = new Date();
+                        var tempDone = (tempTime.getTime() - StartTime) / 1000;
+                        document.title =
+                            docTitle +
+                            "% (" +
+                            SecToHourMinSec(
+                                parseInt(
+                                    ((1000 - docTitle * 10) / docTitle) *
+                                        tempDone,
+                                    10
+                                )
+                            ) +
+                            " to go)";
+                    }
+
+                    var OriginX = x;
+                    var OriginY = y;
+                    var OriginZ = -10000;
+                    var TargetX = x;
+                    var TargetY = y;
+                    var TargetZ = 10000;
+                    var DirectionX = TargetX - OriginX;
+                    var DirectionY = TargetY - OriginY;
+                    var DirectionZ = TargetZ - OriginZ;
+
+                    var ColorOfPoint = { Red: 0, Green: 0, Blue: 0 };
+                    var ColorOfPointPerLamp = { Red: 0, Green: 0, Blue: 0 };
+                    var LampCounter = 0;
+                    for (lamp = 0; lamp < 5; lamp++) {
+                        if (LightOn.items[lamp] == true) {
+                            ColorOfPointPerLamp =
+                                CalculateColorOfPointByRayTracing(
+                                    OriginX,
+                                    OriginY,
+                                    OriginZ,
+                                    DirectionX,
+                                    DirectionY,
+                                    DirectionZ,
+                                    0,
+                                    1.0,
+                                    lamp
+                                );
+                            ColorOfPoint = {
+                                Red: ColorOfPoint.Red + ColorOfPointPerLamp.Red,
+                                Green:
+                                    ColorOfPoint.Green +
+                                    ColorOfPointPerLamp.Green,
+                                Blue:
+                                    ColorOfPoint.Blue +
+                                    ColorOfPointPerLamp.Blue,
+                            };
+                            LampCounter++;
+                        }
+                    }
+                    ColorOfPoint = {
+                        Red: ColorOfPoint.Red / LampCounter,
+                        Green: ColorOfPoint.Green / LampCounter,
+                        Blue: ColorOfPoint.Blue / LampCounter,
+                    };
+                    if (Image2K) {
+                        drawBox(
+                            width / 2 - x,
+                            height / 2 - y,
+                            width / 2 - x + Resolution,
+                            height / 2 - y + Resolution,
+                            1,
+                            DrawingContext,
+                            "rgb(" +
+                                ColorOfPoint.Red * 255 +
+                                ", " +
+                                ColorOfPoint.Green * 255 +
+                                ", " +
+                                ColorOfPoint.Blue * 255 +
+                                ")",
+                            true
+                        );
+                        //console.log(ZoomFaktor,(width/2-x),ZoomFaktor*(width/2-x),ZoomFaktor*(height/2-y),ZoomFaktor*(width/2-x+Resolution),ZoomFaktor*(height/2-y+Resolution));
+                        drawBox(
+                            ZoomFaktor * (width / 2 - x),
+                            ZoomFaktor * (height / 2 - y),
+                            ZoomFaktor * (width / 2 - x + Resolution),
+                            ZoomFaktor * (height / 2 - y + Resolution),
+                            1,
+                            DrawingContext2K,
+                            "rgb(" +
+                                ColorOfPoint.Red * 255 +
+                                ", " +
+                                ColorOfPoint.Green * 255 +
+                                ", " +
+                                ColorOfPoint.Blue * 255 +
+                                ")",
+                            true
+                        );
+                    } else {
+                        drawBox(
+                            width / 2 - x,
+                            height / 2 - y,
+                            width / 2 - x + Resolution,
+                            height / 2 - y + Resolution,
+                            1,
+                            DrawingContext,
+                            "rgb(" +
+                                ColorOfPoint.Red * 255 +
+                                ", " +
+                                ColorOfPoint.Green * 255 +
+                                ", " +
+                                ColorOfPoint.Blue * 255 +
+                                ")",
+                            true
+                        );
+                    }
+                }, 0);
+            }
+
+            function CalculateColorOfPointByRayTracing(
+                OriginX,
+                OriginY,
+                OriginZ,
+                DirectionX,
+                DirectionY,
+                DirectionZ,
+                RecursionDepth,
+                RefractiveIndexInCurrentMedium,
+                lamp
+            ) {
+                var AreaHitByLightRay = HitObjectByLightRay(
+                    OriginX,
+                    OriginY,
+                    OriginZ,
+                    DirectionX,
+                    DirectionY,
+                    DirectionZ
+                );
+                if (
+                    AreaHitByLightRay.ObjectNo >= 0 &&
+                    RecursionDepth < MaxRecursionDepth
+                ) {
+                    var ShadowCheckRayOriginX =
+                        AreaHitByLightRay.IntersectionPointX;
+                    var ShadowCheckRayOriginY =
+                        AreaHitByLightRay.IntersectionPointY;
+                    var ShadowCheckRayOriginZ =
+                        AreaHitByLightRay.IntersectionPointZ;
+                    var ShadowCheckRayDirectionX =
+                        LightSourceX.items[lamp] - ShadowCheckRayOriginX;
+                    var ShadowCheckRayDirectionY =
+                        LightSourceY.items[lamp] - ShadowCheckRayOriginY;
+                    var ShadowCheckRayDirectionZ =
+                        LightSourceZ.items[lamp] - ShadowCheckRayOriginZ;
+
+                    var AreaHitByShadowLightRay = HitObjectByLightRay(
+                        ShadowCheckRayOriginX,
+                        ShadowCheckRayOriginY,
+                        ShadowCheckRayOriginZ,
+                        ShadowCheckRayDirectionX,
+                        ShadowCheckRayDirectionY,
+                        ShadowCheckRayDirectionZ
+                    );
+                    if (AreaHitByShadowLightRay.ObjectNo < 0) {
+                        var AngleForBrightness =
+                            CalculateAngleBetweenNormalAndLightSource(
+                                AreaHitByLightRay.IntersectionPointX,
+                                AreaHitByLightRay.IntersectionPointY,
+                                AreaHitByLightRay.IntersectionPointZ,
+                                LightSourceX.items[lamp],
+                                LightSourceY.items[lamp],
+                                LightSourceZ.items[lamp],
+                                AreaHitByLightRay.ObjectNo
+                            );
+                        if (Math.cos(AngleForBrightness) < 0) {
+                            AngleForBrightness = Math.PI / 2;
+                        }
+
+                        var ColorDirectLight = {
+                            Red:
+                                ColorRedOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                ColorOfLightSource.items[lamp].Red *
+                                Math.cos(AngleForBrightness),
+                            Green:
+                                ColorGreenOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                ColorOfLightSource.items[lamp].Green *
+                                Math.cos(AngleForBrightness),
+                            Blue:
+                                ColorBlueOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                ColorOfLightSource.items[lamp].Blue *
+                                Math.cos(AngleForBrightness),
+                        };
+                    } else {
+                        var ColorShadowLight =
+                            CalculateColorOfPointByRayTracing(
+                                ShadowCheckRayOriginX,
+                                ShadowCheckRayOriginY,
+                                ShadowCheckRayOriginZ,
+                                ShadowCheckRayDirectionX,
+                                ShadowCheckRayDirectionY,
+                                ShadowCheckRayDirectionZ,
+                                RecursionDepth + 1,
+                                RefractiveIndexInCurrentMedium,
+                                lamp
+                            );
+
+                        var AngleForBrightness =
+                            CalculateAngleBetweenNormalAndLightSource(
+                                AreaHitByLightRay.IntersectionPointX,
+                                AreaHitByLightRay.IntersectionPointY,
+                                AreaHitByLightRay.IntersectionPointZ,
+                                LightSourceX.items[lamp],
+                                LightSourceY.items[lamp],
+                                LightSourceZ.items[lamp],
+                                AreaHitByLightRay.ObjectNo
+                            );
+                        if (Math.cos(AngleForBrightness) < 0) {
+                            AngleForBrightness = Math.PI / 2;
+                        }
+
+                        var ColorDirectLight = {
+                            Red:
+                                ColorShadowLight.Red *
+                                    AreaConstants.items[
+                                        AreaHitByShadowLightRay.ObjectNo
+                                    ].PartOfRefractionlight +
+                                ColorRedOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                    ColorOfLightSource.items[lamp].Red *
+                                    Math.cos(AngleForBrightness) *
+                                    (1 -
+                                        AreaConstants.items[
+                                            AreaHitByShadowLightRay.ObjectNo
+                                        ].PartOfRefractionlight), // was "0"
+                            Green:
+                                ColorShadowLight.Green *
+                                    AreaConstants.items[
+                                        AreaHitByShadowLightRay.ObjectNo
+                                    ].PartOfRefractionlight +
+                                ColorGreenOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                    ColorOfLightSource.items[lamp].Green *
+                                    Math.cos(AngleForBrightness) *
+                                    (1 -
+                                        AreaConstants.items[
+                                            AreaHitByShadowLightRay.ObjectNo
+                                        ].PartOfRefractionlight), // was "0",
+                            Blue:
+                                ColorShadowLight.Blue *
+                                    AreaConstants.items[
+                                        AreaHitByShadowLightRay.ObjectNo
+                                    ].PartOfRefractionlight +
+                                ColorBlueOfAreaAtThisPoint(
+                                    AreaHitByLightRay.ObjectNo,
+                                    AreaHitByLightRay.IntersectionPointX,
+                                    AreaHitByLightRay.IntersectionPointY,
+                                    AreaHitByLightRay.IntersectionPointZ
+                                ) *
+                                    ColorOfLightSource.items[lamp].Blue *
+                                    Math.cos(AngleForBrightness) *
+                                    (1 -
+                                        AreaConstants.items[
+                                            AreaHitByShadowLightRay.ObjectNo
+                                        ].PartOfRefractionlight), // was "0",
+                        };
+                    }
+
+                    var ReflectLight = CalculateReflection(
+                        OriginX,
+                        OriginY,
+                        OriginZ,
+                        AreaHitByLightRay.IntersectionPointX,
+                        AreaHitByLightRay.IntersectionPointY,
+                        AreaHitByLightRay.IntersectionPointZ,
+                        AreaHitByLightRay.ObjectNo
+                    );
+                    if (
+                        Math.pow(
+                            AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                .PartOfReflectlight,
+                            RecursionDepth
+                        ) > LevelOfInfluence
+                    ) {
+                        var ColorReflectLight =
+                            CalculateColorOfPointByRayTracing(
+                                AreaHitByLightRay.IntersectionPointX,
+                                AreaHitByLightRay.IntersectionPointY,
+                                AreaHitByLightRay.IntersectionPointZ,
+                                ReflectLight.DirectionX,
+                                ReflectLight.DirectionY,
+                                ReflectLight.DirectionZ,
+                                RecursionDepth + 1,
+                                RefractiveIndexInCurrentMedium,
+                                lamp
+                            );
+                    } else {
+                        var ColorReflectLight = {
+                            Red: 0,
+                            Green: 0,
+                            Blue: 0,
+                        };
+                    }
+
+                    if (AreaHitByShadowLightRay.ObjectNo < 0) {
+                        var SurfaceGlossAngleBetweenLightSourceAndReflectionLightRay =
+                            AngleBetweenVectors(
+                                ReflectLight.DirectionX,
+                                ReflectLight.DirectionY,
+                                ReflectLight.DirectionZ,
+                                LightSourceX.items[lamp] -
+                                    AreaHitByLightRay.IntersectionPointX,
+                                LightSourceY.items[lamp] -
+                                    AreaHitByLightRay.IntersectionPointY,
+                                LightSourceZ.items[lamp] -
+                                    AreaHitByLightRay.IntersectionPointZ
+                            );
+                        if (
+                            Math.abs(
+                                SurfaceGlossAngleBetweenLightSourceAndReflectionLightRay
+                            ) >
+                            Math.PI / 2
+                        ) {
+                            SurfaceGlossAngleBetweenLightSourceAndReflectionLightRay =
+                                Math.PI / 2;
+                        }
+
+                        var SurfaceGlossFactor = Math.pow(
+                            Math.cos(
+                                SurfaceGlossAngleBetweenLightSourceAndReflectionLightRay
+                            ),
+                            AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                .SurfaceStructur
+                        );
+                        ////console.log(SurfaceGlossFactor);
+                        var ColorDirectLight = {
+                            Red:
+                                ColorDirectLight.Red +
+                                SurfaceGlossFactor *
+                                    ColorOfLightSource.items[lamp].Red,
+                            Green:
+                                ColorDirectLight.Green +
+                                SurfaceGlossFactor *
+                                    ColorOfLightSource.items[lamp].Green,
+                            Blue:
+                                ColorDirectLight.Blue +
+                                SurfaceGlossFactor *
+                                    ColorOfLightSource.items[lamp].Blue,
+                        };
+                    }
+
+                    if (
+                        RefractiveIndexInCurrentMedium ==
+                        AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                            .RefractiveIndexOfMaterial
+                    ) {
+                        var RefractiveIndexInNewMedium = 1.0;
+                    } else {
+                        var RefractiveIndexInNewMedium =
+                            AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                .RefractiveIndexOfMaterial;
+                    }
+
+                    var RefractionLight = CalculateRefraction(
+                        OriginX,
+                        OriginY,
+                        OriginZ,
+                        AreaHitByLightRay.IntersectionPointX,
+                        AreaHitByLightRay.IntersectionPointY,
+                        AreaHitByLightRay.IntersectionPointZ,
+                        AreaHitByLightRay.ObjectNo,
+                        RefractiveIndexInCurrentMedium,
+                        RefractiveIndexInNewMedium
+                    );
+                    //console.log(Math.pow(AreaConstants.items[AreaHitByLightRay.ObjectNo].PartOfRefractionlight,RecursionDepth));
+                    //console.log(RefractionLight.TotalReflection);
+                    if (
+                        RefractionLight.TotalReflection == false &&
+                        Math.pow(
+                            AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                .PartOfRefractionlight,
+                            RecursionDepth
+                        ) > LevelOfInfluence
+                    ) {
+                        //////console.log(AreaHitByLightRay.IntersectionPointX +" "+ AreaHitByLightRay.IntersectionPointY +" "+ AreaHitByLightRay.IntersectionPointZ +" "+ RefractionLight.DirectionX +" "+ RefractionLight.DirectionY +" "+ RefractionLight.DirectionZ +" "+ (RecursionDepth+1) +" "+ RefractiveIndexInNewMedium);
+                        var ColorRefractionLight =
+                            CalculateColorOfPointByRayTracing(
+                                AreaHitByLightRay.IntersectionPointX,
+                                AreaHitByLightRay.IntersectionPointY,
+                                AreaHitByLightRay.IntersectionPointZ,
+                                RefractionLight.DirectionX,
+                                RefractionLight.DirectionY,
+                                RefractionLight.DirectionZ,
+                                RecursionDepth + 1,
+                                RefractiveIndexInNewMedium,
+                                lamp
+                            );
+                    } else {
+                        var ColorRefractionLight = {
+                            Red: 0,
+                            Green: 0,
+                            Blue: 0,
+                        };
+                    }
+                    //console.log(RecursionDepth);
+                    ////console.log(ColorDirectLight.Red   +" "+ AreaConstants.items[AreaHitByLightRay.ObjectNo].PartOfDirectLight   +" "+ ColorReflectLight.Red   +" "+ AreaConstants.items[AreaHitByLightRay.ObjectNo].PartOfReflectlight   +" "+ ColorRefractionLight.Red    +" "+ AreaConstants.items[AreaHitByLightRay.ObjectNo].PartOfRefractionlight   +" "+ ColorOfLightSource.Red    +" "+ PartSurrounding,)
+                    var ColorPixel = {
+                        Red:
+                            ColorDirectLight.Red *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfDirectLight +
+                            ColorReflectLight.Red *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfReflectlight +
+                            ColorRefractionLight.Red *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfRefractionlight +
+                            ColorOfLightSource.items[lamp].Red *
+                                PartSurrounding,
+                        Green:
+                            ColorDirectLight.Green *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfDirectLight +
+                            ColorReflectLight.Green *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfReflectlight +
+                            ColorRefractionLight.Green *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfRefractionlight +
+                            ColorOfLightSource.items[lamp].Green *
+                                PartSurrounding,
+                        Blue:
+                            ColorDirectLight.Blue *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfDirectLight +
+                            ColorReflectLight.Blue *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfReflectlight +
+                            ColorRefractionLight.Blue *
+                                AreaConstants.items[AreaHitByLightRay.ObjectNo]
+                                    .PartOfRefractionlight +
+                            ColorOfLightSource.items[lamp].Blue *
+                                PartSurrounding,
+                    };
+                } else {
+                    var ColorPixel = {
+                        Red: 1,
+                        Green: 1,
+                        Blue: 1,
+                    };
+                }
+
+                return {
+                    Red: ColorPixel.Red,
+                    Green: ColorPixel.Green,
+                    Blue: ColorPixel.Blue,
+                };
+            }
+
+            function HitObjectByLightRay(
+                OriginX,
+                OriginY,
+                OriginZ,
+                DirectionX,
+                DirectionY,
+                DirectionZ
+            ) {
+                var ObjectNo = -1;
+                var Distance = 1e6;
+                var IntersectionPointX = 1e6;
+                var IntersectionPointY = 1e6;
+                var IntersectionPointZ = 1e6;
+
+                for (i = 0; i < AreaIndex; i++) {
+                    var HitWithArea = CheckForHitWithArea(
+                        OriginX,
+                        OriginY,
+                        OriginZ,
+                        DirectionX,
+                        DirectionY,
+                        DirectionZ,
+                        i
+                    );
+                    if (
+                        HitWithArea.HitHappend == true &&
+                        HitWithArea.Distance < Distance
+                    ) {
+                        ObjectNo = i;
+                        Distance = HitWithArea.Distance;
+                        IntersectionPointX = HitWithArea.IntersectionPointX;
+                        IntersectionPointY = HitWithArea.IntersectionPointY;
+                        IntersectionPointZ = HitWithArea.IntersectionPointZ;
+                    }
+                }
+
+                return {
+                    ObjectNo: ObjectNo,
+                    IntersectionPointX: IntersectionPointX,
+                    IntersectionPointY: IntersectionPointY,
+                    IntersectionPointZ: IntersectionPointZ,
+                    Distance: Distance,
+                };
+            }
+
+            function CheckForHitWithArea(
+                OriginX,
+                OriginY,
+                OriginZ,
+                DirectionX,
+                DirectionY,
+                DirectionZ,
+                i
+            ) {
+                var HitHappend = false;
+                var Distance = 1e6;
+                var IntersectionPointX = 1e6;
+                var IntersectionPointY = 1e6;
+                var IntersectionPointZ = 1e6;
+
+                var a = AreaConstants.items[i].a;
+                var b = AreaConstants.items[i].b;
+                var c = AreaConstants.items[i].c;
+                var d = AreaConstants.items[i].d;
+
+                var ScalarProduct =
+                    DirectionX * a + DirectionY * b + DirectionZ * c;
+
+                if (ScalarProduct != 0) {
+                    var w =
+                        (-a * OriginX - b * OriginY - c * OriginZ - d) /
+                        ScalarProduct;
+                    IntersectionPointX = OriginX + w * DirectionX;
+                    IntersectionPointY = OriginY + w * DirectionY;
+                    IntersectionPointZ = OriginZ + w * DirectionZ;
+
+                    if (
+                        w > 1e-10 &&
+                        CheckIfIntersectionWithinArea(
+                            IntersectionPointX,
+                            IntersectionPointY,
+                            IntersectionPointZ,
+                            i
+                        ) == true
+                    ) {
+                        HitHappend = true;
+                        Distance = Math.sqrt(
+                            (OriginX - IntersectionPointX) *
+                                (OriginX - IntersectionPointX) +
+                                (OriginY - IntersectionPointY) *
+                                    (OriginY - IntersectionPointY) +
+                                (OriginZ - IntersectionPointZ) *
+                                    (OriginZ - IntersectionPointZ)
+                        );
+                    }
+                }
+
+                return {
+                    HitHappend: HitHappend,
+                    Distance: Distance,
+                    IntersectionPointX: IntersectionPointX,
+                    IntersectionPointY: IntersectionPointY,
+                    IntersectionPointZ: IntersectionPointZ,
+                };
+            }
+
+            function CheckIfIntersectionWithinArea(
+                IntersectionPointX,
+                IntersectionPointY,
+                IntersectionPointZ,
+                i
+            ) {
+                var Ax = Area.items[i][0][0];
+                var Ay = Area.items[i][0][1];
+                var Az = Area.items[i][0][2];
+                var Bx = Area.items[i][1][0];
+                var By = Area.items[i][1][1];
+                var Bz = Area.items[i][1][2];
+                var Cx = Area.items[i][2][0];
+                var Cy = Area.items[i][2][1];
+                var Cz = Area.items[i][2][2];
+
+                var Mx = (Bx - Ax) / 2 + Ax;
+                var My = (By - Ay) / 2 + Ay;
+                var Mz = (Bz - Az) / 2 + Az;
+
+                var Sx = IntersectionPointX;
+                var Sy = IntersectionPointY;
+                var Sz = IntersectionPointZ;
+
+                var T1 =
+                    ((By - Sy) * Ax + (-Bx + Sx) * Ay + Bx * Sy - By * Sx) /
+                    ((My - Sy) * Ax +
+                        (Sx - Mx) * Ay +
+                        (Sy - My) * Bx +
+                        By * (Mx - Sx));
+                var R1 =
+                    ((Sy - My) * Bx + By * (Mx - Sx) - Sy * Mx + Sx * My) /
+                    ((Sy - My) * Bx +
+                        By * (Mx - Sx) +
+                        Ax * My -
+                        Ax * Sy -
+                        Ay * Mx +
+                        Ay * Sx);
+
+                var T2 =
+                    ((Cy - Sy) * Bx + (-Cx + Sx) * By + Cx * Sy - Cy * Sx) /
+                    ((My - Sy) * Bx +
+                        (Sx - Mx) * By +
+                        (Sy - My) * Cx +
+                        Cy * (Mx - Sx));
+                var R2 =
+                    ((Sy - My) * Cx + Cy * (Mx - Sx) - Sy * Mx + Sx * My) /
+                    ((Sy - My) * Cx +
+                        Cy * (Mx - Sx) +
+                        Bx * My -
+                        Bx * Sy -
+                        By * Mx +
+                        By * Sx);
+
+                var T3 =
+                    ((Ay - Sy) * Cx + (-Ax + Sx) * Cy + Ax * Sy - Ay * Sx) /
+                    ((My - Sy) * Cx +
+                        (Sx - Mx) * Cy +
+                        (Sy - My) * Ax +
+                        Ay * (Mx - Sx));
+                var R3 =
+                    ((Sy - My) * Ax + Ay * (Mx - Sx) - Sy * Mx + Sx * My) /
+                    ((Sy - My) * Ax +
+                        Ay * (Mx - Sx) +
+                        Cx * My -
+                        Cx * Sy -
+                        Cy * Mx +
+                        Cy * Sx);
+
+                var NumberOfInterceptionsWithAreaEdges = 0;
+                if (T1 >= 0 && R1 >= 0 && R1 <= 1) {
+                    NumberOfInterceptionsWithAreaEdges =
+                        NumberOfInterceptionsWithAreaEdges + 1;
+                }
+                if (T2 >= 0 && R2 >= 0 && R2 <= 1) {
+                    NumberOfInterceptionsWithAreaEdges =
+                        NumberOfInterceptionsWithAreaEdges + 1;
+                }
+                if (T3 >= 0 && R3 >= 0 && R3 <= 1) {
+                    NumberOfInterceptionsWithAreaEdges =
+                        NumberOfInterceptionsWithAreaEdges + 1;
+                }
+                if (NumberOfInterceptionsWithAreaEdges == 1) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            function CalculateReflection(
+                OriginX,
+                OriginY,
+                OriginZ,
+                IntersectionPointX,
+                IntersectionPointY,
+                IntersectionPointZ,
+                i
+            ) {
+                var NxNyNz = GetNxNyNzForArea(
+                    i,
+                    IntersectionPointX,
+                    IntersectionPointY,
+                    IntersectionPointZ
+                );
+                var nx = NxNyNz.nx;
+                var ny = NxNyNz.ny;
+                var nz = NxNyNz.nz;
+
+                var Factor =
+                    (nx * (OriginX - IntersectionPointX) +
+                        ny * (OriginY - IntersectionPointY) +
+                        nz * (OriginZ - IntersectionPointZ)) /
+                    (nx * nx + ny * ny + nz * nz);
+                var Qx = 2 * nx * Factor + 2 * IntersectionPointX - OriginX;
+                var Qy = 2 * ny * Factor + 2 * IntersectionPointY - OriginY;
+                var Qz = 2 * nz * Factor + 2 * IntersectionPointZ - OriginZ;
+
+                return {
+                    DirectionX: Qx - IntersectionPointX,
+                    DirectionY: Qy - IntersectionPointY,
+                    DirectionZ: Qz - IntersectionPointZ,
+                };
+            }
+
+            function CalculateRefraction(
+                OriginX,
+                OriginY,
+                OriginZ,
+                IntersectionPointX,
+                IntersectionPointY,
+                IntersectionPointZ,
+                i,
+                RefractiveIndexInCurrentMedium,
+                RefractiveIndexInNewMaterial
+            ) {
+                var NxNyNz = GetNxNyNzForArea(
+                    i,
+                    IntersectionPointX,
+                    IntersectionPointY,
+                    IntersectionPointZ
+                );
+                var nx = NxNyNz.nx;
+                var ny = NxNyNz.ny;
+                var nz = NxNyNz.nz;
+
+                var Factor =
+                    (nx * (OriginX - IntersectionPointX) +
+                        ny * (OriginY - IntersectionPointY) +
+                        nz * (OriginZ - IntersectionPointZ)) /
+                    (nx * nx + ny * ny + nz * nz);
+                var Qx = 2 * nx * Factor + 2 * IntersectionPointX - OriginX;
+                var Qy = 2 * ny * Factor + 2 * IntersectionPointY - OriginY;
+                var Qz = 2 * nz * Factor + 2 * IntersectionPointZ - OriginZ;
+
+                var Alpha = AngleBetweenVectors(
+                    IntersectionPointX - OriginX,
+                    IntersectionPointY - OriginY,
+                    IntersectionPointZ - OriginZ,
+                    nx,
+                    ny,
+                    nz
+                );
+                if (Alpha > Math.PI / 2) {
+                    nx = -nx;
+                    ny = -ny;
+                    nz = -nz;
+                    Alpha = AngleBetweenVectors(
+                        IntersectionPointX - OriginX,
+                        IntersectionPointY - OriginY,
+                        IntersectionPointZ - OriginZ,
+                        nx,
+                        ny,
+                        nz
+                    );
+                }
+                var TempBeta =
+                    (Math.sin(Alpha) * RefractiveIndexInCurrentMedium) /
+                    RefractiveIndexInNewMaterial;
+                if (Math.abs(TempBeta) > 1) {
+                    var TotalReflection = true;
+                    var Hx = IntersectionPointX;
+                    var Hy = IntersectionPointY;
+                    var Hz = IntersectionPointZ;
+                } else {
+                    var TotalReflection = false;
+                    var Beta = Math.asin(TempBeta);
+
+                    var US = LengthOfVector(
+                        IntersectionPointX - OriginX,
+                        IntersectionPointY - OriginY,
+                        IntersectionPointZ - OriginZ
+                    );
+                    var UQ = LengthOfVector(
+                        Qx - OriginX,
+                        Qy - OriginY,
+                        Qz - OriginZ
+                    );
+                    var UW = US * (Math.sin(Alpha) + Math.sin(Beta));
+
+                    var Wx = OriginX + (UW / UQ) * (Qx - OriginX);
+                    var Wy = OriginY + (UW / UQ) * (Qy - OriginY);
+                    var Wz = OriginZ + (UW / UQ) * (Qz - OriginZ);
+
+                    var WH = US * (Math.cos(Alpha) + Math.cos(Beta));
+
+                    var Hx =
+                        Wx + (WH * nx) / Math.sqrt(nx * nx + ny * ny + nz * nz);
+                    var Hy =
+                        Wy + (WH * ny) / Math.sqrt(nx * nx + ny * ny + nz * nz);
+                    var Hz =
+                        Wz + (WH * nz) / Math.sqrt(nx * nx + ny * ny + nz * nz);
+                }
+
+                return {
+                    TotalReflection: TotalReflection,
+                    DirectionX: Hx - IntersectionPointX,
+                    DirectionY: Hy - IntersectionPointY,
+                    DirectionZ: Hz - IntersectionPointZ,
+                };
+            }
+
+            function CalculateAngleBetweenNormalAndLightSource(
+                IntersectionPointX,
+                IntersectionPointY,
+                IntersectionPointZ,
+                LightSourceX,
+                LightSourceY,
+                LightSourceZ,
+                i
+            ) {
+                var NxNyNz = GetNxNyNzForArea(
+                    i,
+                    IntersectionPointX,
+                    IntersectionPointY,
+                    IntersectionPointZ
+                );
+                var nx = NxNyNz.nx;
+                var ny = NxNyNz.ny;
+                var nz = NxNyNz.nz;
+
+                var TempAngle = AngleBetweenVectors(
+                    nx,
+                    ny,
+                    nz,
+                    LightSourceX - IntersectionPointX,
+                    LightSourceY - IntersectionPointY,
+                    LightSourceZ - IntersectionPointZ
+                );
+                if (TempAngle > Math.PI / 2) {
+                    nx = -nx;
+                    ny = -ny;
+                    nz = -nz;
+                }
+                return AngleBetweenVectors(
+                    nx,
+                    ny,
+                    nz,
+                    LightSourceX - IntersectionPointX,
+                    LightSourceY - IntersectionPointY,
+                    LightSourceZ - IntersectionPointZ
+                );
+            }
+
+            function PrepareConstants() {
+                for (var i = 0; i < AreaIndex; i++) {
+                    var Ax = Area.items[i][0][0];
+                    var Ay = Area.items[i][0][1];
+                    var Az = Area.items[i][0][2];
+                    var Bx = Area.items[i][1][0];
+                    var By = Area.items[i][1][1];
+                    var Bz = Area.items[i][1][2];
+                    var Cx = Area.items[i][2][0];
+                    var Cy = Area.items[i][2][1];
+                    var Cz = Area.items[i][2][2];
+
+                    var a = +(By - Ay) * (Cz - Az) - (Cy - Ay) * (Bz - Az);
+                    var b = -(Bx - Ax) * (Cz - Az) + (Cx - Ax) * (Bz - Az);
+                    var c = +(Bx - Ax) * (Cy - Ay) - (Cx - Ax) * (By - Ay);
+                    var d = -(
+                        Cy * Az * Bx +
+                        Cz * Ax * By +
+                        Cx * Ay * Bz -
+                        Cz * Ay * Bx -
+                        Cx * Az * By -
+                        Cy * Ax * Bz
+                    );
+                    // a = parseFloat(a.toPrecision(10)); // parseFloal and toPrecision to avoid rounding issues for the corresponding 2 triangle areas splitted from rectangle areas
+                    // b = parseFloat(b.toPrecision(10));
+                    // c = parseFloat(c.toPrecision(10));
+                    // d = parseFloat(d.toPrecision(10));
+                    var nx = (By - Ay) * (Cz - Az) - (Cy - Ay) * (Bz - Az);
+                    var ny = -(Bx - Ax) * (Cz - Az) + (Cx - Ax) * (Bz - Az);
+                    var nz = (Bx - Ax) * (Cy - Ay) - (Cx - Ax) * (By - Ay);
+                    // nx = parseFloat(nx.toPrecision(10));
+                    // ny = parseFloat(ny.toPrecision(10));
+                    // nz = parseFloat(nz.toPrecision(10));
+
+                    // console.log("Normalen Vektor: (sollte 2x gleich sein fuer 2 Dreiecke aus einem Viereck)",nx,ny,nz);
+
+                    AreaConstants.items[i].a = a;
+                    AreaConstants.items[i].b = b;
+                    AreaConstants.items[i].c = c;
+                    AreaConstants.items[i].d = d;
+                    AreaConstants.items[i].nx = nx / LengthOfVector(nx, ny, nz);
+                    AreaConstants.items[i].ny = ny / LengthOfVector(nx, ny, nz);
+                    AreaConstants.items[i].nz = nz / LengthOfVector(nx, ny, nz);
+                    AreaConstants.items[i].CenterX = (Ax + Bx + Cx) / 3;
+                    AreaConstants.items[i].CenterY = (Ay + By + Cy) / 3;
+                    AreaConstants.items[i].CenterZ = (Az + Bz + Cz) / 3;
+                    AreaConstants.items[i].AdjacentAreas = [];
+                    for (var j = 0; j < AreaIndex; j++) {
+                        if (j != i && DoTwoAreasHaveACommonCorner(i, j)) {
+                            AreaConstants.items[i].AdjacentAreas.push(j);
+                        }
+                    }
+                }
+            }
+        </script>
+        <a id="link"></a>
+    </body>
+</html>
