@@ -11,7 +11,8 @@
 // v2.12 01.05.2022 Changed number of segments for new Spheres from 50 to 25
 // v2.11 01.05.2022 In function SetupAreaConstants(index): Changed color of new predefined objects to white (could also be gold [#d4af37] or any other color). Also adjusted some other settings of new objects there
 // v2.12 03.05.2022 Removed possibility to run non-WebWorker calculation via 'UseWebWorker'
-// v2.13 03.05.2022 In function SetupAreaConstants(index): Changed color of new predefined objects to gold [#d4af37]
+// v2.12b 03.05.2022 In function SetupAreaConstants(index): Changed color of new predefined objects to gold [#d4af37]
+// v2.13 14.05.2022 Added SurroundingBox calculation to only run RayTracing where objects are
 
 function drawLine(x1, y1, x2, y2, thickness, DrawingContext, color) {
     DrawingContext.beginPath();
@@ -1030,6 +1031,7 @@ function keydownevent(event) {
                 setTimeout(function () {
                     document.title = "Calculation stopped";
                 }, 0);
+                RemoveSurroundingBox();
             } else RayTracingStart();
             break;
         case 81: // "q"	key
@@ -1123,6 +1125,7 @@ function RayTracingStart() {
         console.log("Start time: " + StartTime);
     }, 0);
     // ApplyPerspectiveDistortionForArea();
+    CheckForSurroundingBox();
     PrepareConstants();
     RayTracing();
 
@@ -1137,12 +1140,14 @@ function RayTracingStart() {
             console.log(
                 "Total calculation time: " +
                     (tempTime.getTime() - StartTime) / 1000 +
-                    "s)"
+                    "s"
             );
             // alert("Total calculation time: " + (tempTime.getTime() - StartTime) / 1000 +"s)");
             docTitle = 0;
             RayTracingStarted = false;
             RayTracingCompleted = false;
+            //DeleteObject(AreaBelongsToObject[SurroundingBoxAreas[0]]);
+            RemoveSurroundingBox();
             clearInterval(StopCalculation);
         }
     }, 5000);
@@ -1184,6 +1189,7 @@ function RayTracingStart2K() {
     }, 3);
 
     setTimeout(function () {
+        CheckForSurroundingBox();
         PrepareConstants();
         RayTracing();
     }, 5);
@@ -1223,6 +1229,11 @@ function RayTracingStart2K() {
             "s and 2K-Image saved)";
         docTitle = 0;
     }, 10000);
+}
+
+function RemoveSurroundingBox() {
+    NumberOfCompleteObjects--;
+    AreaIndex = AreaIndex - 12;
 }
 
 function CheckIfAllPointsWereEntered() {
@@ -3695,6 +3706,7 @@ function SelectObject(what) {
 }
 
 function DeleteObject(Number) {
+    // Funktion tut nicht richtig. Sie verzieht alle Objekte.
     CloneAreaValues(AreaOriginal, Area);
     var deleted = false;
     var AreaIndexOrig = AreaIndex;
@@ -5006,7 +5018,7 @@ function SetUpLights() {
     for (lamp = 0; lamp < 5; lamp++) {
         LightSourceX.items[lamp] = -10000 * lamp + 25000;
         LightSourceY.items[lamp] = 10000;
-        LightSourceZ.items[lamp] = -10000 * lamp + 25000;
+        LightSourceZ.items[lamp] = 10000 * lamp - 15000;
         ColorOfLightSource.items[lamp] = { Red: 1, Green: 1, Blue: 1 };
         LightOn.items[lamp] = false;
     }
