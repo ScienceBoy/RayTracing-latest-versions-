@@ -29,6 +29,9 @@ var SelectedArea = new Array1D(maxarea);
 var AreaConstants = new Array1D(maxarea);
 var AreaIndex = 0;
 
+var SurroundingBoxMinMax = new Array1D(6);
+var SurroundingBoxAreas = new Array1D(12);
+
 var AreaZValues = new Array1D(maxarea);
 var AreaOrderIndex = new Array1D(maxarea);
 
@@ -158,8 +161,9 @@ self.onmessage = function (dataReceived) {
     SurfaceStructur = dataReceived.data.data.SurfaceStructur;
     ZoomFaktor = dataReceived.data.data.ZoomFaktor;
     MaxRecursionDepth = dataReceived.data.data.MaxRecursionDepth;
+    SurroundingBoxAreas = dataReceived.data.data.SurroundingBoxAreas;
+    SurroundingBoxMinMax = dataReceived.data.data.SurroundingBoxMinMax;
     NumberOfCPUCores = dataReceived.data.data.NumberOfCPUCores;
-
     counter = dataReceived.data.counter;
 
     //var NumberOfCPUCores = navigator.hardwareConcurrency - 1 || 1;
@@ -586,7 +590,11 @@ function HitObjectByLightRay(
     var IntersectionPointY = 1e6;
     var IntersectionPointZ = 1e6;
 
-    for (i = 0; i < AreaIndex; i++) {
+    var WithinSurroundingBox = false;
+    // var Ignore = false;
+
+    for (var i = 0; i < 12; i++) {
+        //console.log(SurroundingBoxAreas[i], WithinSurroundingBox);
         var HitWithArea = CheckForHitWithArea(
             OriginX,
             OriginY,
@@ -594,14 +602,54 @@ function HitObjectByLightRay(
             DirectionX,
             DirectionY,
             DirectionZ,
-            i
+            SurroundingBoxAreas[i]
         );
-        if (HitWithArea.HitHappend == true && HitWithArea.Distance < Distance) {
-            ObjectNo = i;
-            Distance = HitWithArea.Distance;
-            IntersectionPointX = HitWithArea.IntersectionPointX;
-            IntersectionPointY = HitWithArea.IntersectionPointY;
-            IntersectionPointZ = HitWithArea.IntersectionPointZ;
+        if (
+            (OriginX > SurroundingBoxMinMax[0] &&
+                OriginX < SurroundingBoxMinMax[1] &&
+                OriginY > SurroundingBoxMinMax[2] &&
+                OriginY < SurroundingBoxMinMax[3] &&
+                OriginZ > SurroundingBoxMinMax[4] &&
+                OriginZ < SurroundingBoxMinMax[5]) ||
+            HitWithArea.HitHappend == true
+        ) {
+            WithinSurroundingBox = true;
+        }
+    }
+
+    if (WithinSurroundingBox == true) {
+        // Ignore = false;
+        for (
+            var i = 0;
+            i < AreaIndex - 12;
+            i++ // -12 weil SurroundingBox 12 Flächen hat und als letzte Flächen angehängt wurden
+        ) {
+            // for (ij = 0; ij < 12; ij++) {
+            //     if (i == SurroundingBoxAreas[ij]) {
+            //         Ignore = true;
+            //     }
+            // }
+            // if (Ignore == false) {
+            var HitWithArea = CheckForHitWithArea(
+                OriginX,
+                OriginY,
+                OriginZ,
+                DirectionX,
+                DirectionY,
+                DirectionZ,
+                i
+            );
+            if (
+                HitWithArea.HitHappend == true &&
+                HitWithArea.Distance < Distance
+            ) {
+                ObjectNo = i;
+                Distance = HitWithArea.Distance;
+                IntersectionPointX = HitWithArea.IntersectionPointX;
+                IntersectionPointY = HitWithArea.IntersectionPointY;
+                IntersectionPointZ = HitWithArea.IntersectionPointZ;
+            }
+            // }
         }
     }
 
